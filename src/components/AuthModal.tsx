@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { useAuth } from '@/lib/auth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -17,39 +18,36 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onToggleMode }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signIn, signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    // Simulate authentication
     try {
-      // In a real app, this would be an API call to authenticate
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Save user info in localStorage (in a real app, you'd use proper auth tokens)
-      localStorage.setItem('filefly_user', JSON.stringify({
-        id: `user_${Math.random().toString(36).substring(2, 9)}`,
-        email,
-        name: mode === 'signup' ? name : email.split('@')[0]
-      }));
+      if (mode === 'login') {
+        const { error } = await signIn(email, password);
+        if (error) throw error;
+      } else {
+        const { error } = await signUp(email, password, username);
+        if (error) throw error;
+      }
       
       toast({
         title: mode === 'login' ? "Logged in successfully" : "Account created successfully",
         description: "Welcome to FileFly!",
       });
       
-      // Redirect to dashboard
       navigate('/dashboard');
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Authentication failed",
-        description: "Please check your credentials and try again.",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
@@ -68,12 +66,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onT
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           {mode === 'signup' && (
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="username">Username</Label>
               <Input
-                id="name"
-                placeholder="Enter your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                id="username"
+                placeholder="Choose a username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 className="w-full"
               />
@@ -139,4 +137,4 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onT
       </DialogContent>
     </Dialog>
   );
-};
+}
