@@ -1,14 +1,19 @@
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, User, LogOut } from 'lucide-react';
 import { AuthModal } from './AuthModal';
+import { useAuth } from '@/lib/auth';
+import { useToast } from '@/components/ui/use-toast';
 
 export const NavBar: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -22,6 +27,22 @@ export const NavBar: React.FC = () => {
   const openSignupModal = () => {
     setAuthMode('signup');
     setIsAuthModalOpen(true);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Logged out successfully",
+      });
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -44,11 +65,35 @@ export const NavBar: React.FC = () => {
             <ul className="flex gap-6">
               <li><a href="#features" className="text-gray-600 hover:text-brand-600">Features</a></li>
               <li><a href="#pricing" className="text-gray-600 hover:text-brand-600">Pricing</a></li>
+              {user && (
+                <li>
+                  <Link to="/dashboard" className="text-gray-600 hover:text-brand-600">Dashboard</Link>
+                </li>
+              )}
             </ul>
           </nav>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={openLoginModal}>Login</Button>
-            <Button onClick={openSignupModal} className="bg-brand-600 hover:bg-brand-700">Sign Up</Button>
+            {user ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  <span className="text-sm font-medium">{user.email}</span>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  onClick={handleLogout}
+                  className="flex items-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={openLoginModal}>Login</Button>
+                <Button onClick={openSignupModal} className="bg-brand-600 hover:bg-brand-700">Sign Up</Button>
+              </>
+            )}
           </div>
         </div>
 
@@ -63,8 +108,24 @@ export const NavBar: React.FC = () => {
           <nav className="flex flex-col gap-4">
             <a href="#features" className="text-gray-600 py-2 px-4" onClick={() => setIsMenuOpen(false)}>Features</a>
             <a href="#pricing" className="text-gray-600 py-2 px-4" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-            <Button variant="ghost" onClick={() => { openLoginModal(); setIsMenuOpen(false); }} className="justify-start">Login</Button>
-            <Button onClick={() => { openSignupModal(); setIsMenuOpen(false); }} className="bg-brand-600 hover:bg-brand-700 justify-start">Sign Up</Button>
+            {user && (
+              <Link to="/dashboard" className="text-gray-600 py-2 px-4" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
+            )}
+            {user ? (
+              <Button 
+                variant="ghost" 
+                onClick={() => { handleLogout(); setIsMenuOpen(false); }}
+                className="justify-start"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" onClick={() => { openLoginModal(); setIsMenuOpen(false); }} className="justify-start">Login</Button>
+                <Button onClick={() => { openSignupModal(); setIsMenuOpen(false); }} className="bg-brand-600 hover:bg-brand-700 justify-start">Sign Up</Button>
+              </>
+            )}
           </nav>
         </div>
       )}

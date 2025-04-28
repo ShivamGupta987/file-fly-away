@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from '@/lib/auth';
+import { Loader2 } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -32,18 +33,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onT
       if (mode === 'login') {
         const { error } = await signIn(email, password);
         if (error) throw error;
+        
+        toast({
+          title: "Logged in successfully",
+          description: "Welcome to FileFly!",
+        });
+        
+        navigate('/dashboard');
+        onClose();
       } else {
+        if (!username.trim()) {
+          throw new Error("Username is required");
+        }
+        
         const { error } = await signUp(email, password, username);
         if (error) throw error;
+        
+        toast({
+          title: "Account created successfully",
+          description: "Welcome to FileFly!",
+        });
+        
+        navigate('/dashboard');
+        onClose();
       }
-      
-      toast({
-        title: mode === 'login' ? "Logged in successfully" : "Account created successfully",
-        description: "Welcome to FileFly!",
-      });
-      
-      navigate('/dashboard');
-      onClose();
     } catch (error: any) {
       toast({
         title: "Authentication failed",
@@ -106,7 +119,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, mode, onT
             className="w-full bg-brand-600 hover:bg-brand-700"
             disabled={loading}
           >
-            {loading ? 'Processing...' : mode === 'login' ? 'Login' : 'Sign Up'}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : mode === 'login' ? 'Login' : 'Sign Up'}
           </Button>
           <div className="text-center text-sm">
             {mode === 'login' ? (
