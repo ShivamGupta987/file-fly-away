@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/components/ui/use-toast';
 import { Upload } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/lib/auth';
 
 interface FileUploaderProps {
   onFileUploaded: (fileData: any) => void;
@@ -16,6 +19,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) =>
   const [progress, setProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -48,46 +52,83 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) =>
   };
 
   const handleUpload = async () => {
-    if (!file) return;
+    if (!file || !user) return;
     
-    setUploading(true);
-    
-    // Simulate file upload with progress
-    const totalSteps = 10;
-    for (let i = 1; i <= totalSteps; i++) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      setProgress((i / totalSteps) * 100);
+    try {
+      setUploading(true);
+      
+      // Generate a unique file path
+      const fileExtension = file.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExtension}`;
+      const filePath = `${user.id}/${fileName}`;
+      
+      // Upload file to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('file_uploads')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false,
+          onUploadProgress: (progress) => {
+            setProgress((progress.loaded / progress.total) * 100);
+          },
+        });
+      
+      if (uploadError) throw uploadError;
+      
+      // Create a public URL for the file
+      const { data: publicUrlData } = supabase.storage
+        .from('file_uploads')
+        .getPublicUrl(filePath);
+      
+      if (!publicUrlData.publicUrl) {
+        throw new Error('Failed to generate public URL');
+      }
+      
+      // Save the file metadata to the database
+      const { data: fileData, error: fileError } = await supabase
+        .from('shared_files')
+        .insert({
+          user_id: user.id,
+          file_name: file.name,
+          file_size: file.size,
+          file_type: file.type,
+          storage_path: filePath,
+          public_url: publicUrlData.publicUrl,
+        })
+        .select()
+        .single();
+      
+      if (fileError) throw fileError;
+      
+      // Create file data object
+      const fileMetadata = {
+        id: fileData.id,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        url: publicUrlData.publicUrl,
+        uploadDate: new Date().toISOString()
+      };
+      
+      onFileUploaded(fileMetadata);
+      
+      toast({
+        title: "File uploaded successfully!",
+        description: "Your file is now available to share.",
+      });
+      
+      setUploading(false);
+      setProgress(0);
+      setFile(null);
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "An error occurred while uploading your file.",
+        variant: "destructive"
+      });
+      setUploading(false);
+      console.error("Upload error:", error);
     }
-    
-    // Simulate a unique file ID and shareable link
-    const fileId = Math.random().toString(36).substring(2, 15);
-    const shareableLink = `${window.location.origin}/file/${fileId}`;
-    
-    // In a real app, this would be where you'd upload to a server
-    const fileData = {
-      id: fileId,
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      url: shareableLink,
-      uploadDate: new Date().toISOString(),
-      file: file // In a real app, you wouldn't store the actual file object like this
-    };
-    
-    // Store in localStorage for demo purposes
-    const existingFiles = JSON.parse(localStorage.getItem('filefly_files') || '[]');
-    localStorage.setItem('filefly_files', JSON.stringify([...existingFiles, fileData]));
-    
-    onFileUploaded(fileData);
-    
-    toast({
-      title: "File uploaded successfully!",
-      description: "Your file is now available to share.",
-    });
-    
-    setUploading(false);
-    setProgress(0);
-    setFile(null);
   };
 
   const handleBrowseClick = () => {
@@ -121,7 +162,7 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) =>
       
       {!file ? (
         <div
-          className={`file-drop-area ${isDragging ? 'active' : ''}`}
+          className={`file-drop-area border-2 border-dashed border-gray-300 rounded-lg p-12 text-center ${isDragging ? 'bg-brand-50 border-brand-300' : 'bg-gray-50'}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}

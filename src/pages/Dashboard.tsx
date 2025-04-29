@@ -5,29 +5,76 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { FileUploader } from '@/components/FileUploader';
 import { FileCard } from '@/components/FileCard';
+import { useAuth } from '@/lib/auth';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
-  const [user, setUser] = useState<any>(null);
   const [files, setFiles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   useEffect(() => {
-    // Check if user is logged in
-    const userData = localStorage.getItem('filefly_user');
-    if (!userData) {
-      navigate('/');
-      return;
-    }
+    if (!user) return;
+    
+    const fetchFiles = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('shared_files')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+        
+        setFiles(data.map(file => ({
+          id: file.id,
+          name: file.file_name,
+          size: file.file_size,
+          type: file.file_type,
+          url: file.public_url,
+          uploadDate: file.created_at
+        })));
+      } catch (error) {
+        console.error('Error fetching files:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchFiles();
+    
+    // Set up real-time subscription for file changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'shared_files',
+        filter: `user_id=eq.${user.id}`,
+      }, (payload) => {
+        const newFile = payload.new;
+        setFiles(prevFiles => [{
+          id: newFile.id,
+          name: newFile.file_name,
+          size: newFile.file_size,
+          type: newFile.file_type,
+          url: newFile.public_url,
+          uploadDate: newFile.created_at
+        }, ...prevFiles]);
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
-    setUser(JSON.parse(userData));
-
-    // Load files from localStorage
-    const storedFiles = JSON.parse(localStorage.getItem('filefly_files') || '[]');
-    setFiles(storedFiles);
-  }, [navigate]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('filefly_user');
+  const handleLogout = async () => {
+    await signOut();
     navigate('/');
   };
 
@@ -62,11 +109,11 @@ const Dashboard = () => {
           
           <div className="flex items-center gap-4">
             <div className="text-right hidden md:block">
-              <p className="font-medium">{user.name || user.email}</p>
+              <p className="font-medium">{user.email}</p>
               <p className="text-sm text-gray-500">{user.email}</p>
             </div>
             <div className="h-10 w-10 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-medium">
-              {(user.name || user.email).charAt(0).toUpperCase()}
+              {(user.email?.charAt(0) || 'U').toUpperCase()}
             </div>
             <Button variant="outline" onClick={handleLogout}>Logout</Button>
           </div>
@@ -87,7 +134,11 @@ const Dashboard = () => {
         <div>
           <h2 className="text-xl font-semibold mb-4">Your Files</h2>
           
-          {files.length === 0 ? (
+          {loading ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+              <p>Loading your files...</p>
+            </div>
+          ) : files.length === 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
               <div className="flex flex-col items-center max-w-sm mx-auto">
                 <div className="h-16 w-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -103,7 +154,7 @@ const Dashboard = () => {
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {files.map((file: any, index: number) => (
-                <FileCard key={index} file={file} />
+                <FileCard key={file.id || index} file={file} />
               ))}
             </div>
           )}

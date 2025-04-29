@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const FileView = () => {
   const { fileId } = useParams<{ fileId: string }>();
@@ -11,19 +12,45 @@ const FileView = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // In a real app, this would be an API call to fetch file information
-    const fetchFile = () => {
+    const fetchFile = async () => {
+      if (!fileId) return;
+      
       setLoading(true);
       try {
-        const storedFiles = JSON.parse(localStorage.getItem('filefly_files') || '[]');
-        const foundFile = storedFiles.find((f: any) => f.id === fileId);
+        // Fetch file metadata from the database
+        const { data, error } = await supabase
+          .from('shared_files')
+          .select('*')
+          .eq('id', fileId)
+          .single();
         
-        if (foundFile) {
-          setFile(foundFile);
-        } else {
-          setError('File not found or it may have been removed.');
+        if (error) {
+          throw error;
         }
+        
+        if (!data) {
+          setError('File not found or it may have been removed.');
+          return;
+        }
+        
+        setFile({
+          id: data.id,
+          name: data.file_name,
+          size: data.file_size,
+          type: data.file_type,
+          url: data.public_url,
+          uploadDate: data.created_at,
+          storagePath: data.storage_path
+        });
+        
+        // Update download count
+        await supabase
+          .from('shared_files')
+          .update({ download_count: (data.download_count || 0) + 1 })
+          .eq('id', fileId);
+        
       } catch (err) {
+        console.error('Error fetching file:', err);
         setError('Error retrieving file information.');
       } finally {
         setLoading(false);
@@ -33,23 +60,15 @@ const FileView = () => {
     fetchFile();
   }, [fileId]);
 
-  const handleDownload = () => {
-    // In a real app, this would trigger an actual download from your server or storage
+  const handleDownload = async () => {
     if (!file) return;
     
-    // Create a download link
-    const downloadUrl = URL.createObjectURL(file.file);
-    const a = document.createElement('a');
-    a.href = downloadUrl;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    
-    // Clean up
-    setTimeout(() => {
-      URL.revokeObjectURL(downloadUrl);
-      document.body.removeChild(a);
-    }, 100);
+    try {
+      // Create a download link
+      window.open(file.url, '_blank');
+    } catch (error) {
+      console.error('Download error:', error);
+    }
   };
 
   const formatFileSize = (bytes: number) => {

@@ -1,141 +1,131 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogOut } from 'lucide-react';
-import { AuthModal } from './AuthModal';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { useAuth } from '@/lib/auth';
-import { useToast } from '@/components/ui/use-toast';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-export const NavBar: React.FC = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+interface NavBarProps {
+  onLoginClick?: () => void;
+}
+
+export const NavBar: React.FC<NavBarProps> = ({ onLoginClick }) => {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, signOut } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const openLoginModal = () => {
-    setAuthMode('login');
-    setIsAuthModalOpen(true);
-  };
-
-  const openSignupModal = () => {
-    setAuthMode('signup');
-    setIsAuthModalOpen(true);
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Logged out successfully",
-      });
-      navigate('/');
-    } catch (error: any) {
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
+  
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
-    <header className="w-full py-4 px-6 md:px-12 bg-white/80 backdrop-blur-sm fixed top-0 z-50 shadow-sm">
-      <div className="container mx-auto flex justify-between items-center">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-600 to-brand-400 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-white">
-              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-              <polyline points="14 2 14 8 20 8" />
-              <path d="M12 18v-6" />
-              <path d="m9 15 3 3 3-3" />
-            </svg>
-          </span>
-          <span className="font-bold text-xl text-gray-900">FileFly</span>
-        </Link>
-        
-        <div className="hidden md:flex items-center gap-8">
-          <nav>
-            <ul className="flex gap-6">
-              <li><a href="#features" className="text-gray-600 hover:text-brand-600">Features</a></li>
-              <li><a href="#pricing" className="text-gray-600 hover:text-brand-600">Pricing</a></li>
-              {user && (
-                <li>
-                  <Link to="/dashboard" className="text-gray-600 hover:text-brand-600">Dashboard</Link>
-                </li>
-              )}
-            </ul>
-          </nav>
-          <div className="flex items-center gap-4">
+    <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
+      <div className="container mx-auto px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <Link to="/" className="flex items-center gap-2">
+              <span className="h-8 w-8 rounded-lg bg-gradient-to-br from-brand-600 to-brand-400 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-white">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <path d="M12 18v-6" />
+                  <path d="m9 15 3 3 3-3" />
+                </svg>
+              </span>
+              <span className="font-bold text-xl text-gray-900">FileFly</span>
+            </Link>
+
+            <div className="hidden md:flex ml-10">
+              <NavigationMenu>
+                <NavigationMenuList>
+                  <NavigationMenuItem>
+                    <NavigationMenuLink 
+                      href="#features" 
+                      className={navigationMenuTriggerStyle()}
+                    >
+                      Features
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <NavigationMenuLink 
+                      href="#pricing" 
+                      className={navigationMenuTriggerStyle()}
+                    >
+                      Pricing
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
+            </div>
+          </div>
+
+          <div className="flex items-center">
             {user ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  <span className="text-sm font-medium">{user.email}</span>
-                </div>
+              <div className="flex items-center gap-4">
                 <Button 
-                  variant="ghost" 
-                  onClick={handleLogout}
-                  className="flex items-center gap-2"
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
                 >
-                  <LogOut className="h-4 w-4" />
-                  Logout
+                  Dashboard
                 </Button>
-              </>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="h-8 w-8 rounded-full p-0"
+                    >
+                      <span className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 font-medium">
+                        {(user.email?.charAt(0) || 'U').toUpperCase()}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>Dashboard</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut}>Logout</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             ) : (
-              <>
-                <Button variant="ghost" onClick={openLoginModal}>Login</Button>
-                <Button onClick={openSignupModal} className="bg-brand-600 hover:bg-brand-700">Sign Up</Button>
-              </>
+              <Button 
+                variant="ghost" 
+                className="text-brand-600 hover:text-brand-700 hover:bg-brand-50"
+                onClick={onLoginClick}
+              >
+                Login
+              </Button>
             )}
           </div>
         </div>
-
-        <button className="md:hidden" onClick={toggleMenu}>
-          {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
       </div>
 
       {/* Mobile menu */}
-      {isMenuOpen && (
-        <div className="md:hidden absolute top-16 inset-x-0 bg-white shadow-md p-4 z-50">
-          <nav className="flex flex-col gap-4">
-            <a href="#features" className="text-gray-600 py-2 px-4" onClick={() => setIsMenuOpen(false)}>Features</a>
-            <a href="#pricing" className="text-gray-600 py-2 px-4" onClick={() => setIsMenuOpen(false)}>Pricing</a>
-            {user && (
-              <Link to="/dashboard" className="text-gray-600 py-2 px-4" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
-            )}
-            {user ? (
-              <Button 
-                variant="ghost" 
-                onClick={() => { handleLogout(); setIsMenuOpen(false); }}
-                className="justify-start"
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
-            ) : (
-              <>
-                <Button variant="ghost" onClick={() => { openLoginModal(); setIsMenuOpen(false); }} className="justify-start">Login</Button>
-                <Button onClick={() => { openSignupModal(); setIsMenuOpen(false); }} className="bg-brand-600 hover:bg-brand-700 justify-start">Sign Up</Button>
-              </>
-            )}
-          </nav>
-        </div>
-      )}
-
-      <AuthModal 
-        isOpen={isAuthModalOpen} 
-        onClose={() => setIsAuthModalOpen(false)} 
-        mode={authMode} 
-        onToggleMode={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} 
-      />
+      <div className={`md:hidden ${isMobileMenuOpen ? 'block' : 'hidden'} p-4 bg-white border-t border-gray-100`}>
+        <nav className="flex flex-col space-y-3">
+          <a href="#features" className="px-4 py-2 text-gray-800 hover:bg-gray-100 rounded-md">Features</a>
+          <a href="#pricing" className="px-4 py-2 text-gray-800 hover:bg-gray-100 rounded-md">Pricing</a>
+        </nav>
+      </div>
     </header>
   );
 };

@@ -33,6 +33,42 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_files: {
+        Row: {
+          created_at: string
+          download_count: number | null
+          file_name: string
+          file_size: number
+          file_type: string
+          id: string
+          public_url: string
+          storage_path: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          download_count?: number | null
+          file_name: string
+          file_size: number
+          file_type: string
+          id?: string
+          public_url: string
+          storage_path: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          download_count?: number | null
+          file_name?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          public_url?: string
+          storage_path?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

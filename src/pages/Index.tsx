@@ -1,19 +1,37 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { NavBar } from '@/components/NavBar';
 import { Hero } from '@/components/Hero';
 import { Features } from '@/components/Features';
+import { AuthModal } from '@/components/AuthModal';
+import { useAuth } from '@/lib/auth';
 
 const Index = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleGetStarted = () => {
-    setIsAuthModalOpen(true);
+    if (user) {
+      navigate('/dashboard');
+    } else {
+      setAuthMode('signup');
+      setIsAuthModalOpen(true);
+    }
+  };
+
+  const handleToggleAuthMode = () => {
+    setAuthMode(authMode === 'login' ? 'signup' : 'login');
   };
 
   return (
     <div className="min-h-screen">
-      <NavBar />
+      <NavBar onLoginClick={() => {
+        setAuthMode('login');
+        setIsAuthModalOpen(true);
+      }} />
       <main className="pt-16">
         <Hero onGetStarted={handleGetStarted} />
         <Features />
@@ -190,6 +208,13 @@ const Index = () => {
           </div>
         </footer>
       </main>
+      
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        mode={authMode}
+        onToggleMode={handleToggleAuthMode}
+      />
     </div>
   );
 };
