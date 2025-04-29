@@ -64,8 +64,13 @@ const FileView = () => {
     if (!file) return;
     
     try {
-      // Create a download link
-      window.open(file.url, '_blank');
+      // Using a direct download link approach
+      const link = document.createElement('a');
+      link.href = file.url;
+      link.setAttribute('download', file.name);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     } catch (error) {
       console.error('Download error:', error);
     }
@@ -124,46 +129,54 @@ const FileView = () => {
             </span>
             <span className="font-bold text-xl text-gray-900">FileFly</span>
           </Link>
+          
+          <div className="ml-4 flex items-center text-sm">
+            <Link to="/" className="text-gray-500 hover:text-gray-700 flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 19-7-7 7-7"/>
+                <path d="M5 12h14"/>
+              </svg>
+              Back to home
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content - Download Card */}
       <main className="flex-1 flex items-center justify-center p-6">
-        <div className="bg-white rounded-xl shadow-md p-8 max-w-2xl w-full">
-          <div className="text-center mb-8">
-            <div className="h-20 w-20 mx-auto bg-brand-50 rounded-lg flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand-600">
+        <div className="bg-white rounded-xl shadow-md max-w-md w-full overflow-hidden">
+          {/* Blue header area with file icon */}
+          <div className="bg-blue-500 h-40 flex items-center justify-center">
+            <div className="bg-blue-400/50 rounded-lg p-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                 <polyline points="14 2 14 8 20 8" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold mb-2 break-words">{file.name}</h1>
-            <p className="text-gray-500">{formatFileSize(file.size)}</p>
           </div>
-
-          <div className="bg-gray-50 rounded-lg p-6 mb-8 text-center">
-            <p className="text-gray-600 mb-4">This file has been shared with you via FileFly</p>
+          
+          {/* File info and download button */}
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-1">{file.name}</h2>
+            <p className="text-gray-500 mb-6">{formatFileSize(file.size)}</p>
+            
             <Button 
               onClick={handleDownload}
-              className="bg-brand-600 hover:bg-brand-700 flex mx-auto items-center gap-2"
-              size="lg"
+              className="w-full bg-gray-900 hover:bg-gray-800 h-12 mb-3 justify-center gap-2"
             >
               <Download className="h-5 w-5" />
               Download File
             </Button>
-          </div>
-
-          <div className="text-center text-sm text-gray-500">
-            <p className="mb-1">Need to share your own files?</p>
-            <Link to="/" className="text-brand-600 hover:underline">
-              Create a free account on FileFly
-            </Link>
+            
+            <p className="text-sm text-center text-gray-500">
+              Click the button above to start your download
+            </p>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-white py-4 px-6 border-t">
+      <footer className="bg-white py-4 px-6 border-t mt-auto">
         <div className="container mx-auto max-w-4xl text-center text-sm text-gray-500">
           <p>© 2025 FileFly. All rights reserved.</p>
         </div>
