@@ -62,16 +62,25 @@ export const FileUploader: React.FC<FileUploaderProps> = ({ onFileUploaded }) =>
       const fileName = `${uuidv4()}.${fileExtension}`;
       const filePath = `${user.id}/${fileName}`;
       
+      // Track upload progress manually
+      let uploadProgress = 0;
+      const intervalId = setInterval(() => {
+        if (uploadProgress < 95) {
+          uploadProgress += 5;
+          setProgress(uploadProgress);
+        }
+      }, 200);
+      
       // Upload file to Supabase Storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('file_uploads')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false,
-          onUploadProgress: (progress) => {
-            setProgress((progress.loaded / progress.total) * 100);
-          },
+          upsert: false
         });
+      
+      clearInterval(intervalId);
+      setProgress(100);
       
       if (uploadError) throw uploadError;
       
